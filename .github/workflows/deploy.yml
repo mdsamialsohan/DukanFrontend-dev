@@ -1,0 +1,35 @@
+name: EZDokani Frontend to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan 46.62.219.142 >> ~/.ssh/known_hosts
+
+      - name: Deploy Frontend
+        env:
+          SSH_PASSPHRASE: ${{ secrets.VPS_DEPLOY_PASSPHRASE }}
+        run: |
+          sshpass -p "$SSH_PASSPHRASE" ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 root@46.62.219.142 "
+            cd /var/www/app/frontend &&
+            git pull &&
+            cd /var/www/app &&
+            docker compose up -d --build frontend
+          "
