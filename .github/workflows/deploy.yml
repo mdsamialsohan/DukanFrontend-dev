@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
+      # 1️⃣ Checkout the repo
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ SSH and deploy
+      # 2️⃣ Deploy via SSH
       - name: SSH and deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
@@ -23,16 +23,27 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             # -----------------------------
-            # Navigate to project directory
+            # Navigate to project directory or clone if first-time
             # -----------------------------
-            mkdir -p /var/www/www.ezdokani.com
-            cd /var/www/www.ezdokani.com
+            PROJECT_DIR=/var/www/www.ezdokani.com
+            if [ ! -d "$PROJECT_DIR/.git" ]; then
+              echo "First-time setup: cloning repo..."
+              mkdir -p $PROJECT_DIR
+              git clone https://github.com/mdsamialsohan/DukanFrontend-dev.git $PROJECT_DIR
+            fi
+            cd $PROJECT_DIR
+
+            # Ensure repo is synced
+            git fetch --all
+            git reset --hard origin/main
 
             # -----------------------------
-            # Pull latest code from main
+            # Check if Dockerfile exists
             # -----------------------------
-            git reset --hard
-            git pull origin main
+            if [ ! -f "$PROJECT_DIR/Dockerfile" ]; then
+              echo "Dockerfile missing! Deployment aborted."
+              exit 1
+            fi
 
             # -----------------------------
             # Stop and remove all old containers
@@ -50,9 +61,13 @@ jobs:
             fi
 
             # -----------------------------
-            # Build new Docker image (no cache)
+            # Build new Docker image
             # -----------------------------
-            sudo docker build --no-cache -t nextapp .
+            echo "Building Docker image..."
+            if ! sudo docker build --no-cache -t nextapp .; then
+              echo "Docker build failed! Deployment aborted."
+              exit 1
+            fi
 
             # -----------------------------
             # Run new container
@@ -72,7 +87,10 @@ jobs:
             # -----------------------------
             # Optional: simple health check
             # -----------------------------
+            echo "Checking app health..."
             if ! curl -s http://127.0.0.1:3000 > /dev/null; then
               echo "Next.js container failed to start!"
               exit 1
             fi
+
+            echo "Deployment successful!"
