@@ -4,8 +4,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
-RUN npm run build
 RUN npx update-browserslist-db@latest
+RUN npm run build
 
 # Stage 2: Production
 FROM node:20-alpine
