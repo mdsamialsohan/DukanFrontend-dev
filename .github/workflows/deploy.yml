@@ -10,9 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2️⃣ SSH and deploy
       - name: SSH and deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
@@ -20,24 +22,57 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # -----------------------------
             # Navigate to project directory
-            cd /var/www/www.ezdokani.com || mkdir -p /var/www/www.ezdokani.com && cd /var/www/www.ezdokani.com
+            # -----------------------------
+            mkdir -p /var/www/www.ezdokani.com
+            cd /var/www/www.ezdokani.com
 
-            # Pull latest code
+            # -----------------------------
+            # Pull latest code from main
+            # -----------------------------
             git reset --hard
-            git pull dev main
+            git pull origin main
 
-            # Build Docker image
-            sudo docker build -t nextapp .
-
-            # Stop and remove old container if exists
-            if [ $(sudo docker ps -a -q -f name=nextapp) ]; then
-              sudo docker stop nextapp
-              sudo docker rm nextapp
+            # -----------------------------
+            # Stop and remove all old containers
+            # -----------------------------
+            OLD_CONTAINERS=$(sudo docker ps -a -q -f name=nextapp)
+            if [ -n "$OLD_CONTAINERS" ]; then
+              sudo docker stop $OLD_CONTAINERS || true
+              sudo docker rm $OLD_CONTAINERS || true
             fi
 
-            # Run the new container
+            # Remove any "Created" containers from previous builds
+            CREATED_CONTAINERS=$(sudo docker ps -a -q -f status=created -f ancestor=nextapp)
+            if [ -n "$CREATED_CONTAINERS" ]; then
+              sudo docker rm $CREATED_CONTAINERS || true
+            fi
+
+            # -----------------------------
+            # Build new Docker image (no cache)
+            # -----------------------------
+            sudo docker build --no-cache -t nextapp .
+
+            # -----------------------------
+            # Run new container
+            # -----------------------------
             sudo docker run -d -p 3000:3000 --name nextapp nextapp
 
-            # Reload Nginx to ensure reverse proxy works
-            sudo nginx -t && sudo systemctl reload nginx
+            # -----------------------------
+            # Test Nginx config and reload
+            # -----------------------------
+            if sudo nginx -t; then
+              sudo systemctl reload nginx
+            else
+              echo "Nginx configuration test failed! Deployment aborted."
+              exit 1
+            fi
+
+            # -----------------------------
+            # Optional: simple health check
+            # -----------------------------
+            if ! curl -s http://127.0.0.1:3000 > /dev/null; then
+              echo "Next.js container failed to start!"
+              exit 1
+            fi
