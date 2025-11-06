@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Deploy Next.js App to VPS
 
 on:
   push:
@@ -8,17 +8,36 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: SSH into VPS and deploy
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: SSH and deploy to VPS
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /path/to/your/app
-            git pull
+            # Navigate to project directory
+            cd /var/www/www.ezdokani.com || mkdir -p /var/www/www.ezdokani.com && cd /var/www/www.ezdokani.com
+
+            # Pull latest code
+            git reset --hard
+            git pull origin main
+
+            # Build Docker image
             sudo docker build -t nextapp .
-            sudo docker stop nextapp || true
-            sudo docker rm nextapp || true
+
+            # Stop and remove old container if exists
+            if [ $(sudo docker ps -a -q -f name=nextapp) ]; then
+              sudo docker stop nextapp
+              sudo docker rm nextapp
+            fi
+
+            # Run the new container
             sudo docker run -d -p 3000:3000 --name nextapp nextapp
+
+            # Reload Nginx to ensure reverse proxy works
+            sudo nginx -t && sudo systemctl reload nginx
