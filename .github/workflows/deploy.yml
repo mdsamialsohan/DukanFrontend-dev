@@ -87,6 +87,9 @@ jobs:
             # -----------------------------
             # Optional: simple health check
             # -----------------------------
+            echo "Waiting for app to start..."
+            sleep 30
+
             echo "Checking app health..."
             if ! curl -s http://127.0.0.1:3000 > /dev/null; then
               echo "Next.js container failed to start!"
