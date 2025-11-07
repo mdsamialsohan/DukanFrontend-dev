@@ -6,7 +6,6 @@ const axios = Axios.create({
         'X-Requested-With': 'XMLHttpRequest',
     },
     withCredentials: true,
-    withXSRFToken: true,
     timeout: 5000,
 })
 
