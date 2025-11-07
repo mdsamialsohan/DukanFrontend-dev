@@ -4,7 +4,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
-RUN npx update-browserslist-db@latest
 RUN npm run build
 
 # Stage 2: Production
