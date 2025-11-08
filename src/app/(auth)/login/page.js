@@ -42,7 +42,7 @@ const Login = () => {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-blue-100">
             <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
                 <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
-                    Login
+                    Ez Dokani - Login
                 </h2>
             <AuthSessionStatus className="mb-4" status={status} />
             <form onSubmit={submitForm} className="space-y-4">
