@@ -1,13 +1,12 @@
 import Axios from 'axios';
 
 const axios = Axios.create({
-    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.ezdokani.com',
+    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
     withCredentials: true,
+    withXSRFToken: true,
     headers: {
         'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'application/json',
     },
-    timeout: 5000,
 })
 
 export default axios
